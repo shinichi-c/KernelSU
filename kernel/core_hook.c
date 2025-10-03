@@ -384,7 +384,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 
 skip:
 	kcompat_barrier();
-	if (!is_prctl_valid(option) && !is_manager())
+	if (!is_prctl_valid(option))
 		return 0;
 
 	bool from_root = 0 == current_uid().val;
