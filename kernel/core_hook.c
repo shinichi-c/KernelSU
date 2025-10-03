@@ -355,12 +355,8 @@ static inline void nuke_ext4_sysfs(void)
 
 static inline bool is_prctl_valid(int option)
 {
-	// always allow manager, no matter what happening.
-	if (is_manager())
-		return true;
-
 	// do uid checks first before compare to 0xdeadbeef
-	if (ksu_is_allow_uid(current_uid().val)) {
+	if (is_allow_su()) {
 		if (option == KERNEL_SU_OPTION)
 			return true;
 	}
