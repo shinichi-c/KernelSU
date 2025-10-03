@@ -355,8 +355,6 @@ static inline void nuke_ext4_sysfs(void)
 
 static inline bool is_prctl_valid(int option)
 {
-	kcompat_barrier();
-
 	// always allow manager
 	if (is_manager())
 		return true;
@@ -389,6 +387,7 @@ int ksu_handle_prctl(int option, unsigned long arg2, unsigned long arg3,
 	}
 
 skip:
+	kcompat_barrier();
 	if (!is_prctl_valid(option))
 		return 0;
 
