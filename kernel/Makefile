@@ -17,39 +17,7 @@ ccflags-y += -I$(objtree)/security/selinux -include $(srctree)/include/uapi/asm-
 
 obj-$(CONFIG_KSU) += kernelsu.o
 
-IS_KERNEL_69 := $(strip $(shell \
-    if [ "$(VERSION)" -ge "6" -a "$(PATCHLEVEL)" -ge "9" ]; then \
-      echo TRUE; \
-    else \
-      echo FALSE; \
-    fi \
-  ))
-
-# https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b1992c3772e69a6fd0e3fc81cd4d2820c8b6eca0
-ifeq ($(IS_KERNEL_69),TRUE)
-SRC_LOCATION := $(src)
-else
-SRC_LOCATION := $(srctree)/$(src)
-endif
-
-GIT_TOOL := /usr/bin/env PATH="$$PATH":/usr/bin:/usr/local/bin git
-
-# Check for both https & ssh remote
-REMOTE_CHECK := $(shell cd $(SRC_LOCATION); $(GIT_TOOL) remote -v | grep -E 'github\.com[/:]rsuntk/KernelSU')
-
-ifneq ($(REMOTE_CHECK),)
-ifeq ($(shell cd $(SRC_LOCATION); $(GIT_TOOL) rev-parse --is-shallow-repository),true)
-$(shell cd $(SRC_LOCATION); $(GIT_TOOL) fetch --unshallow)
-endif
-KSU_GIT_VERSION := $(shell cd $(SRC_LOCATION); $(GIT_TOOL) rev-list --count HEAD)
-# ksu_version: major * 10000 + git version + 200 for historical reasons
-$(eval KSU_VERSION=$(shell expr 10000 + $(KSU_GIT_VERSION) + 200))
-$(info -- KernelSU version: $(KSU_VERSION))
-ccflags-y += -DKSU_VERSION=$(KSU_VERSION)
-else # Pass default version if the defined remote is not found
-$(warning "KSU_GIT_VERSION not defined! It is better to make KernelSU a git submodule!")
-ccflags-y += -DKSU_VERSION=16
-endif
+ccflags-y += -DKSU_VERSION=12311
 
 # Checks hooks state
 ifeq ($(CONFIG_KSU_MANUAL_HOOK), y)
@@ -82,6 +50,10 @@ ccflags-y += -DKSU_OPTIONAL_SELINUX_INODE
 endif
 ifeq ($(shell grep -q "int\s\+path_umount" $(srctree)/fs/namespace.c; echo $$?),0)
 ccflags-y += -DKSU_HAS_PATH_UMOUNT
+ifneq ($(shell grep -Eq "^int path_umount" $(srctree)/fs/internal.h; echo $$?),0)
+$(shell sed -i '/^extern void __init mnt_init/a int path_umount(struct path *path, int flags);' $(srctree)/fs/internal.h;)
+$(info -- KernelSU-SusFS: adding 'int path_umount(struct path *path, int flags);' to $(srctree)/fs/internal.h)
+endif
 endif
 ifeq ($(shell grep -A1 "^int vfs_getattr" $(srctree)/fs/stat.c | grep -q "query_flags"; echo $$?),0)
 ccflags-y += -DKSU_HAS_NEW_VFS_GETATTR
@@ -115,4 +87,11 @@ $(info -- Supported KernelSU Manager(s): tiann, rsuntk, 5ec1cff)
 ccflags-y += -Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-int-conversion -Wno-gcc-compat
 ccflags-y += -Wno-declaration-after-statement -Wno-unused-function
 
+## For susfs stuff ##
+ifeq ($(shell test -e $(srctree)/fs/susfs.c; echo $$?),0)
+$(eval SUSFS_VERSION=$(shell cat $(srctree)/include/linux/susfs.h | grep -E '^#define SUSFS_VERSION' | cut -d' ' -f3 | sed 's/"//g'))
+$(info -- KernelSU-SusFS Version: $(SUSFS_VERSION))
+else
+$(error -- You have not integrate susfs in your kernel. Read: https://gitlab.com/simonpunk/susfs4ksu)
+endif
 # Keep a new line here!! Because someone may append config
