@@ -20,7 +20,7 @@
 
 ## How to add
 ```
-curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
+curl -LSs "https://raw.githubusercontent.com/shinichi-c/KernelSU/main/kernel/setup.sh" | bash -s main
 ```
 
 ## Suspicious FS (SusFS) Add-On
