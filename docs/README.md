@@ -25,6 +25,10 @@ curl -LSs "https://raw.githubusercontent.com/shinichi-c/KernelSU/main/kernel/set
 
 ## Suspicious FS (SusFS) Add-On
 
+> [!WARNING]
+> This branch is not always updated.
+>
+
 - `susfs-main`: Synced with latest https://gitlab.com/simonpunk/susfs4ksu.git commit(s), for GKI or non-GKI kernel (backport required).
 - `susfs-legacy`: Synced with `kernel-4.19` of https://gitlab.com/simonpunk/susfs4ksu.git, for non-GKI kernel (stuck in susfs-v1.5.5).
 
@@ -46,7 +50,7 @@ curl -LSs "https://raw.githubusercontent.com/shinichi-c/KernelSU/main/kernel/set
 2. Module system based on [5ec1cff's Magic Mount API on KernelSU](https://github.com/5ec1cff/KernelSU)
 3. [App Profile](https://kernelsu.org/guide/app-profile.html): Lock up the root power in a cage.
 4. Bringing back non-GKI/GKI 1.0 support
-5. Added bare armeabi-v7a/arm32 support.
+5. Added armeabi-v7a/arm32 support.
 
 ## Compatibility State
 
@@ -56,7 +60,7 @@ Older kernels (4.4+) are also compatible, but the kernel will have to be built m
 
 With more backports, KernelSU can supports 3.x kernel (3.4-3.18).
 
-Currently, only `arm64-v8a` and `armeabi-v7a (bare)` are supported.
+Currently, only `arm64-v8a` and `armeabi-v7a` are supported.
 
 ## Usage
 

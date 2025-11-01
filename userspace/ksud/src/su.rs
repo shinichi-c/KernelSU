@@ -1,20 +1,18 @@
-use anyhow::{Ok, Result};
-use getopts::Options;
-use std::env;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
-use std::path::PathBuf;
-use std::{ffi::CStr, process::Command};
+use std::{env, ffi::CStr, path::PathBuf, process::Command};
 
-use crate::{
-    defs,
-    utils::{self, umask},
-};
-
+use anyhow::{Ok, Result};
+use getopts::Options;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use rustix::{
     process::getuid,
     thread::{Gid, Uid, set_thread_res_gid, set_thread_res_uid},
+};
+
+use crate::{
+    defs,
+    utils::{self, umask},
 };
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
@@ -74,6 +72,9 @@ pub fn root_shell() -> Result<()> {
     // we are root now, this was set in kernel!
 
     use anyhow::anyhow;
+    use std::ffi::CString;
+    use std::str;
+
     let env_args: Vec<String> = env::args().collect();
     let program = env_args[0].clone();
     let args = env_args
@@ -264,6 +265,38 @@ pub fn root_shell() -> Result<()> {
             }
 
             set_identity(uid, gid, &groups);
+
+            // devpts - https://github.com/backslashxx/kernelnosu/commit/c0f86b812d363de550131cd7e29820f3f7635e2a
+            // why is the rust representation of a 10-line c code like this on rs ??
+            use libc::{SYS_ioctl, SYS_readlinkat, SYS_setxattr, TCGETS, syscall};
+            let mut t = std::mem::zeroed::<libc::termios>();
+            let ioctl_result = syscall(SYS_ioctl, 0, TCGETS, &mut t);
+
+            if ioctl_result == 0 {
+                let mut pts = vec![0u8; 64];
+                let ps = syscall(
+                    SYS_readlinkat,
+                    libc::AT_FDCWD,
+                    CString::new("/proc/self/fd/0").unwrap().as_ptr(),
+                    pts.as_mut_ptr() as *mut libc::c_char,
+                    pts.len() as libc::c_ulong,
+                );
+
+                if ps != -1 {
+                    pts[ps as usize] = 0;
+                    let pts_path = str::from_utf8(&pts[..ps as usize]).unwrap_or_default();
+                    let ctx = CString::new("u:object_r:devpts:s0").unwrap();
+
+                    syscall(
+                        SYS_setxattr,
+                        pts_path.as_ptr() as *const libc::c_char,
+                        CString::new("security.selinux").unwrap().as_ptr(),
+                        ctx.as_ptr() as *const libc::c_char,
+                        ctx.to_bytes().len() as libc::c_ulong,
+                        0,
+                    );
+                }
+            }
 
             Result::Ok(())
         })
